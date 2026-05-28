@@ -27,11 +27,13 @@ pub fn print(result: &ScanResult) {
     println!("🔒 Protocol Support");
     let mut t = Table::new();
     t.load_preset(UTF8_FULL);
-    t.set_header(vec!["Protocol", "Supported"]);
+    t.set_header(vec!["Protocol", "Supported", "Negotiated Cipher", "Group"]);
     for p in &result.protocols {
         t.add_row(vec![
             p.version.as_str(),
             if p.supported { "✅ Yes" } else { "❌ No" },
+            p.negotiated_cipher.as_deref().unwrap_or("—"),
+            p.negotiated_group.as_deref().unwrap_or("—"),
         ]);
     }
     println!("{t}\n");
