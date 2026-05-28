@@ -17,7 +17,7 @@ Clone and build with Cargo:
 
 ```sh
 git clone https://github.com/ctf16/RuSSL.git
-cd russl
+cd RuSSL
 cargo build --release
 ```
 
