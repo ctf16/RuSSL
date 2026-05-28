@@ -3,7 +3,6 @@ RuSSL is a Rust async CLI tool that connects to a remote host, performs TLS
 handshakes, parses the certificate chain, optionally probes cipher suite
 acceptance, and optionally runs inference-based vulnerability checks.
 
-The Cargo package and binary are named `tls-inspector`.
 
 Output is either a formatted table (default) or machine-readable JSON (`--json`).
 
@@ -18,11 +17,11 @@ Clone and build with Cargo:
 
 ```sh
 git clone <repo-url>
-cd tls-inspector
+cd russl
 cargo build --release
 ```
 
-The compiled binary will be at `target/release/tls-inspector`.
+The compiled binary will be at `target/release/russl`.
 
 Alternatively, run directly without installing:
 
@@ -33,7 +32,7 @@ cargo run -- <args>
 ## Usage
 
 ```
-tls-inspector [OPTIONS] <HOST>
+russl [OPTIONS] <HOST>
 
 Arguments:
   <HOST>  Target hostname
@@ -52,25 +51,25 @@ Options:
 Basic certificate and protocol inspection:
 
 ```sh
-tls-inspector example.com
+russl example.com
 ```
 
 Include cipher suite enumeration and vulnerability checks:
 
 ```sh
-tls-inspector example.com --enumerate-ciphers --check-vulns
+russl example.com --enumerate-ciphers --check-vulns
 ```
 
 Custom port with JSON output (pipeable):
 
 ```sh
-tls-inspector example.com --port 8443 --json
+russl example.com --port 8443 --json
 ```
 
 Non-standard port with all checks:
 
 ```sh
-tls-inspector example.com --port 8443 --enumerate-ciphers --check-vulns --json
+russl example.com --port 8443 --enumerate-ciphers --check-vulns --json
 ```
 
 ## Features
