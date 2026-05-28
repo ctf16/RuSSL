@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository.
 
 ## What this is
 
-**RuSSL** (`tls-inspector` binary/package) is a Rust async CLI tool that connects
+**RuSSL** (`russl` binary, `tls-inspector` package) is a Rust async CLI tool that connects
 to a remote host, performs TLS handshakes, parses the certificate chain, optionally
 probes cipher suite acceptance, and optionally runs inference-based vulnerability
 checks. Output is either a pretty-printed table (default) or machine-readable JSON
@@ -120,6 +120,28 @@ counts the JSON array. Both are gated behind `--ocsp` / `--ct`, run inside
 `cert::inspect` after the leaf is parsed, and degrade to a descriptive status
 rather than failing the scan. crt.sh is frequently slow or returns 502 — that is
 an external condition, handled gracefully.
+
+## Git guidelines
+
+**Commit message prefixes.** Every commit message MUST start with one of these
+prefixes, chosen by what the commit touches:
+
+- `chore:` — general tasks (build config, refactors, housekeeping)
+- `feat:` — new features
+- `dep:` — dependency resolution (adding, removing, bumping deps)
+- `README:` — README updates
+- `ROADMAP:` — ROADMAP updates
+- `AGENTS:` — AGENTS.md updates
+
+**Categorize by feature.** Group only the diffs that belong to a single feature
+or logically connected change into one commit. A commit's files should all serve
+the same purpose.
+
+**Prefer over-differentiated commits.** When in doubt, split. Many small,
+narrowly-scoped commits are strongly preferred over one vague commit bundling
+several features or unrelated files. Do not lump a feature, a README edit, and a
+dependency bump into a single commit — that is three commits (`feat:`, `README:`,
+`dep:`).
 
 ## Phase 2+ work (not yet implemented)
 
