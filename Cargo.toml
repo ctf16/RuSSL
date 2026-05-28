@@ -1,5 +1,5 @@
 [package]
-name = "tls-inspector"
+name = "russl"
 version = "0.1.0"
 edition = "2021"
 
