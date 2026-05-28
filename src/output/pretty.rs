@@ -18,9 +18,23 @@ pub fn print(result: &ScanResult) {
     t.add_row(vec!["Days Remaining", &c.days_remaining.to_string()]);
     t.add_row(vec!["Expired", &c.is_expired.to_string()]);
     t.add_row(vec!["Key Algorithm", &c.key_algorithm]);
+    let key_size = match c.key_bits {
+        Some(bits) if c.weak_key => format!("{bits} bits (WEAK)"),
+        Some(bits) => format!("{bits} bits"),
+        None => "unknown".to_string(),
+    };
+    t.add_row(vec!["Key Size", &key_size]);
+    t.add_row(vec!["Validation", &c.validation_level]);
     t.add_row(vec!["Sig Algorithm", &c.signature_algorithm]);
     t.add_row(vec!["Chain Depth", &c.chain_depth.to_string()]);
     t.add_row(vec!["SANs", &c.sans.join(", ")]);
+    if let Some(status) = &c.ocsp_status {
+        t.add_row(vec!["OCSP Status", status]);
+    }
+    if let Some(count) = c.ct_log_entries {
+        let ct = count.to_string();
+        t.add_row(vec!["CT Log Entries", &ct]);
+    }
     println!("{t}\n");
 
     // Protocols

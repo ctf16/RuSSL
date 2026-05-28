@@ -11,15 +11,15 @@ Infrastructure hardening alongside the first real feature category.
 
 ### Foundation
 
-- [ ] Migrate `anyhow` call sites to the typed `ScanError` enum (`error.rs` is already scaffolded)
-- [ ] Enforce `timeout_secs` that is already wired through `ScanOpts` — wrap each network call in `tokio::time::timeout`
+- [x] Migrate `anyhow` call sites to the typed `ScanError` enum (`error.rs` is already scaffolded)
+- [x] Enforce `timeout_secs` that is already wired through `ScanOpts` — wrap each network call in `tokio::time::timeout`
 
 ### Certificate quality checks
 
-- [ ] **Key strength warning** — flag RSA < 2048-bit or EC < 256-bit public keys
-- [ ] **OCSP revocation** — extract the OCSP responder URL from the cert's Authority Information Access extension, POST a DER-encoded OCSP request, report `Good / Revoked / Unknown`
-- [ ] **Certificate Transparency** — query `https://crt.sh/?q=<domain>&output=json` via `reqwest`, report the number of CT log entries found for the domain
-- [ ] **EV / DV / OV classification** — detect certificate policy OIDs to distinguish Extended Validation, Organization Validated, and Domain Validated certs
+- [x] **Key strength warning** — flag RSA < 2048-bit or EC < 256-bit public keys
+- [x] **OCSP revocation** — extract the OCSP responder URL from the cert's Authority Information Access extension, POST a DER-encoded OCSP request, report `Good / Revoked / Unknown`
+- [x] **Certificate Transparency** — query `https://crt.sh/?q=<domain>&output=json` over the existing tokio-rustls/ring HTTPS stack (no `aws-lc-rs`), report the number of CT log entries found for the domain
+- [x] **EV / DV / OV classification** — detect certificate policy OIDs to distinguish Extended Validation, Organization Validated, and Domain Validated certs
 
 ---
 

@@ -86,6 +86,41 @@ The 0.8 API changed this to a struct with a `.certs` field — do not use that f
 Use `.unix_timestamp()` for epoch seconds, not `.timestamp()` (that does not exist
 on this type). `chrono::Utc::now().timestamp()` is still correct on the chrono side.
 
+`SubjectPublicKeyInfo::parsed()` yields a `PublicKey` whose `.key_size()` returns
+bits (RSA modulus length, EC field size). Used for the weak-key check.
+Certificate policy OIDs come from iterating `cert.extensions()` and matching
+`ParsedExtension::CertificatePolicies`; validation level is keyed off the
+CA/Browser Forum identifiers under `2.23.140.1`.
+
+## Error handling and timeouts
+
+Call sites use the typed `ScanError` enum (`error.rs`), not `anyhow` — `anyhow`
+has been removed from the dependency tree. `main` returns `ExitCode` and prints
+`ScanError`'s `Display` to stderr.
+
+Every network operation is wrapped in `scanner::with_timeout`, which applies
+`ScanOpts::timeout_secs` via `tokio::time::timeout`. A value of `0` disables the
+limit. The `test-util` tokio feature is a dev-dependency so timeout tests can run
+under a paused clock without real delays.
+
+## HTTP client, OCSP, and CT
+
+`scanner::http` is a minimal HTTP/1.1 client over the existing tokio-rustls/ring
+stack — no `reqwest`, no `aws-lc-rs`. It sends `Connection: close`, reads to EOF,
+and decodes chunked transfer-encoding. HTTPS requests perform real chain
+verification against the native roots (unlike `cert::CertCapture`). It relies on
+the process-global ring provider installed in `main`; tests that exercise HTTPS
+must call `install_default()` themselves.
+
+`scanner::der` is a tiny DER encoder plus a positional TLV reader — just enough
+to build an OCSP request and walk an OCSP response. `scanner::ocsp` builds the
+SHA-1 `CertID` (issuer DN hash, issuer key hash, leaf serial) and POSTs it to the
+AIA responder (OCSP is plain HTTP). `scanner::ct` GETs crt.sh over HTTPS and
+counts the JSON array. Both are gated behind `--ocsp` / `--ct`, run inside
+`cert::inspect` after the leaf is parsed, and degrade to a descriptive status
+rather than failing the scan. crt.sh is frequently slow or returns 502 — that is
+an external condition, handled gracefully.
+
 ## Phase 2+ work (not yet implemented)
 
 - **Legacy protocol detection** — shell out to `openssl s_client -tls1 / -tls1_1 / -ssl3`
@@ -94,8 +129,3 @@ on this type). `chrono::Utc::now().timestamp()` is still correct on the chrono s
 - **HSTS check** — HTTP GET on port 80, inspect `Strict-Transport-Security` header
 - **Bulk scanning** — `--input-file` flag, `FuturesUnordered` pool with configurable
   concurrency
-- **CT log check** — query `https://crt.sh/?q=<domain>&output=json`
-- **Timeout enforcement** — `ScanOpts::timeout_secs` is wired through from the CLI
-  but not yet applied; wrap network calls in `tokio::time::timeout`
-- **Typed errors** — `ScanError` in `error.rs` exists but call sites currently use
-  `anyhow`; migrate when the public API stabilizes

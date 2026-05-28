@@ -1,7 +1,7 @@
+use crate::error::ScanError;
 use crate::scanner::Target;
-use anyhow::Result;
-use rustls::{ClientConfig, SupportedCipherSuite};
 use rustls::crypto::{ring as crypto_ring, CryptoProvider};
+use rustls::{ClientConfig, SupportedCipherSuite};
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -24,7 +24,7 @@ const PROBE_SUITES: &[SupportedCipherSuite] = &[
     rustls::crypto::ring::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
 ];
 
-pub async fn enumerate(target: &Target) -> Result<Vec<CipherResult>> {
+pub async fn enumerate(target: &Target, timeout_secs: u64) -> Result<Vec<CipherResult>, ScanError> {
     let semaphore = Arc::new(Semaphore::new(5));
     let mut handles = vec![];
 
@@ -56,6 +56,7 @@ pub async fn enumerate(target: &Target) -> Result<Vec<CipherResult>> {
             let accepted = crate::scanner::handshake::attempt_handshake(
                 &target,
                 Arc::new(config),
+                timeout_secs,
             )
             .await
             .is_ok();
@@ -85,5 +86,21 @@ fn classify(suite: SupportedCipherSuite) -> String {
         "Adequate".into()
     } else {
         "Weak".into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::classify;
+    use rustls::crypto::ring::cipher_suite;
+
+    #[test]
+    fn strength_buckets() {
+        assert_eq!(classify(cipher_suite::TLS13_AES_256_GCM_SHA384), "Strong");
+        assert_eq!(
+            classify(cipher_suite::TLS13_CHACHA20_POLY1305_SHA256),
+            "Strong"
+        );
+        assert_eq!(classify(cipher_suite::TLS13_AES_128_GCM_SHA256), "Adequate");
     }
 }

@@ -41,6 +41,9 @@ Options:
   -p, --port <PORT>       Target port [default: 443]
       --enumerate-ciphers Enumerate supported cipher suites
       --check-vulns       Run vulnerability checks
+      --ocsp              Check certificate revocation status via OCSP
+      --ct                Query crt.sh for Certificate Transparency log entries
+      --all               Run all available analyses (ciphers, vulns, OCSP, CT)
       --json              Output results as JSON
       --timeout <SECS>    Connection timeout in seconds [default: 10]
   -h, --help              Print help
@@ -79,9 +82,26 @@ russl example.com --port 8443 --enumerate-ciphers --check-vulns --json
 - Subject and issuer distinguished names
 - Validity window (Not Before / Not After)
 - Days remaining until expiry, expired flag
-- Public key algorithm and signature algorithm
+- Public key algorithm, key size in bits, and a weak-key warning
+  (RSA < 2048-bit or EC < 256-bit)
+- Validation level (EV / OV / DV) from CA/Browser Forum policy OIDs, with a
+  subject-based fallback when no standardized policy OID is present
+- Signature algorithm
 - Certificate chain depth
 - Subject Alternative Names (SANs)
+
+### OCSP revocation (`--ocsp`)
+
+Extracts the OCSP responder URL from the certificate's Authority Information
+Access extension, POSTs a DER-encoded OCSP request, and reports `Good`,
+`Revoked`, or `Unknown`. Certificates without an OCSP responder (e.g. recent
+Let's Encrypt) are reported as such rather than treated as an error.
+
+### Certificate Transparency (`--ct`)
+
+Queries [crt.sh](https://crt.sh) for the target domain and reports the number
+of Certificate Transparency log entries found. Uses the same tokio-rustls/ring
+HTTPS stack as the rest of the tool, so no additional TLS backend is pulled in.
 
 ### Protocol support probing (always on)
 

@@ -1,5 +1,5 @@
-use crate::scanner::Target;
-use anyhow::Result;
+use crate::error::ScanError;
+use crate::scanner::{with_timeout, Target};
 use rustls::ClientConfig;
 use serde::Serialize;
 use std::sync::Arc;
@@ -20,7 +20,10 @@ pub struct HandshakeInfo {
     pub group: Option<String>,
 }
 
-pub async fn probe_protocols(target: &Target) -> Result<Vec<ProtocolResult>> {
+pub async fn probe_protocols(
+    target: &Target,
+    timeout_secs: u64,
+) -> Result<Vec<ProtocolResult>, ScanError> {
     // rustls 0.23: builder_with_protocol_versions goes straight to WantsVerifier state.
     let versions: &[(&rustls::SupportedProtocolVersion, &str)] = &[
         (&rustls::version::TLS12, "TLS 1.2"),
@@ -40,7 +43,7 @@ pub async fn probe_protocols(target: &Target) -> Result<Vec<ProtocolResult>> {
             .with_no_client_auth();
 
         let (supported, negotiated_cipher, negotiated_group) =
-            match attempt_handshake(target, Arc::new(config)).await {
+            match attempt_handshake(target, Arc::new(config), timeout_secs).await {
                 Ok(info) => (true, info.cipher, info.group),
                 Err(_) => (false, None, None),
             };
@@ -56,15 +59,26 @@ pub async fn probe_protocols(target: &Target) -> Result<Vec<ProtocolResult>> {
     Ok(results)
 }
 
-pub async fn attempt_handshake(target: &Target, config: Arc<ClientConfig>) -> Result<HandshakeInfo> {
-    let connector = TlsConnector::from(config);
-    let stream = TcpStream::connect(target.addr()).await?;
-    let server_name = rustls::pki_types::ServerName::try_from(target.host.as_str())
-        .map_err(|e| anyhow::anyhow!("Invalid server name: {e}"))?
-        .to_owned();
-    let tls_stream = connector.connect(server_name, stream).await?;
-    let conn = tls_stream.get_ref().1;
-    let cipher = conn.negotiated_cipher_suite().map(|s| format!("{:?}", s.suite()));
-    let group = conn.negotiated_key_exchange_group().map(|g| format!("{:?}", g.name()));
-    Ok(HandshakeInfo { cipher, group })
+pub async fn attempt_handshake(
+    target: &Target,
+    config: Arc<ClientConfig>,
+    timeout_secs: u64,
+) -> Result<HandshakeInfo, ScanError> {
+    with_timeout(timeout_secs, async move {
+        let connector = TlsConnector::from(config);
+        let stream = TcpStream::connect(target.addr()).await?;
+        let server_name = rustls::pki_types::ServerName::try_from(target.host.as_str())
+            .map_err(|e| ScanError::InvalidName(e.to_string()))?
+            .to_owned();
+        let tls_stream = connector.connect(server_name, stream).await?;
+        let conn = tls_stream.get_ref().1;
+        let cipher = conn
+            .negotiated_cipher_suite()
+            .map(|s| format!("{:?}", s.suite()));
+        let group = conn
+            .negotiated_key_exchange_group()
+            .map(|g| format!("{:?}", g.name()));
+        Ok(HandshakeInfo { cipher, group })
+    })
+    .await
 }

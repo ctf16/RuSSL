@@ -4,6 +4,7 @@ mod scanner;
 
 use clap::Parser;
 use scanner::{ScanOpts, Target};
+use std::process::ExitCode;
 
 #[derive(Parser, Debug)]
 #[command(name = "tls-inspector", about = "TLS stack inspection tool")]
@@ -27,13 +28,25 @@ struct Cli {
     #[arg(long)]
     check_vulns: bool,
 
+    /// Check certificate revocation status via OCSP
+    #[arg(long)]
+    ocsp: bool,
+
+    /// Query crt.sh for Certificate Transparency log entries
+    #[arg(long)]
+    ct: bool,
+
+    /// Run all available analyses (implies --enumerate-ciphers --check-vulns --ocsp --ct)
+    #[arg(long)]
+    all: bool,
+
     /// Connection timeout in seconds
     #[arg(long, default_value = "10")]
     timeout: u64,
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> ExitCode {
     // rustls 0.23 requires an explicit provider when multiple crypto backends
     // are present as transitive dependencies. Pin to ring throughout.
     rustls::crypto::ring::default_provider()
@@ -44,18 +57,32 @@ async fn main() -> anyhow::Result<()> {
 
     let target = Target { host: cli.host.clone(), port: cli.port };
     let opts = ScanOpts {
-        enumerate_ciphers: cli.enumerate_ciphers,
-        check_vulns: cli.check_vulns,
+        enumerate_ciphers: cli.enumerate_ciphers || cli.all,
+        check_vulns: cli.check_vulns || cli.all,
+        check_ocsp: cli.ocsp || cli.all,
+        check_ct: cli.ct || cli.all,
         timeout_secs: cli.timeout,
     };
 
-    let result = scanner::run_scan(&target, &opts).await?;
+    let result = match scanner::run_scan(&target, &opts).await {
+        Ok(result) => result,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
 
-    if cli.json {
-        output::json::print(&result)?;
+    let printed = if cli.json {
+        output::json::print(&result)
     } else {
         output::pretty::print(&result);
+        Ok(())
+    };
+
+    if let Err(e) = printed {
+        eprintln!("Error: {e}");
+        return ExitCode::FAILURE;
     }
 
-    Ok(())
+    ExitCode::SUCCESS
 }

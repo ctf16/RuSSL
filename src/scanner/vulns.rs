@@ -1,5 +1,5 @@
+use crate::error::ScanError;
 use crate::scanner::{handshake::ProtocolResult, Target};
-use anyhow::Result;
 use serde::Serialize;
 
 #[derive(Serialize, Debug)]
@@ -10,7 +10,10 @@ pub struct VulnResult {
     pub severity: String,
 }
 
-pub async fn check_all(target: &Target, protocols: &[ProtocolResult]) -> Result<Vec<VulnResult>> {
+pub async fn check_all(
+    target: &Target,
+    protocols: &[ProtocolResult],
+) -> Result<Vec<VulnResult>, ScanError> {
     let mut results = vec![];
 
     // POODLE: requires SSLv3 (not probeable via rustls; inferred as not supported)

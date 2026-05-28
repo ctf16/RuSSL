@@ -1,14 +1,19 @@
 use thiserror::Error;
 
-#[allow(dead_code)] // Phase 2+: used when typed errors replace anyhow at call sites
 #[derive(Error, Debug)]
 pub enum ScanError {
     #[error("Connection failed: {0}")]
     Connection(#[from] std::io::Error),
-    #[error("TLS error: {0}")]
-    Tls(#[from] rustls::Error),
+    #[error("Invalid server name: {0}")]
+    InvalidName(String),
+    #[error("No certificate received from server")]
+    NoCertificate,
     #[error("Certificate parse error: {0}")]
     CertParse(String),
-    #[error("Timeout")]
+    #[error("Operation timed out")]
     Timeout,
+    #[error("HTTP error: {0}")]
+    Http(String),
+    #[error("JSON serialization failed: {0}")]
+    Json(#[from] serde_json::Error),
 }
