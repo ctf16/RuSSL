@@ -11,6 +11,13 @@ pub struct ProtocolResult {
     pub version: String,
     pub supported: bool,
     pub negotiated_cipher: Option<String>,
+    pub negotiated_group: Option<String>,
+}
+
+/// Returned by [`attempt_handshake`] on success.
+pub struct HandshakeInfo {
+    pub cipher: Option<String>,
+    pub group: Option<String>,
 }
 
 pub async fn probe_protocols(target: &Target) -> Result<Vec<ProtocolResult>> {
@@ -32,24 +39,32 @@ pub async fn probe_protocols(target: &Target) -> Result<Vec<ProtocolResult>> {
             .with_root_certificates(root_store)
             .with_no_client_auth();
 
-        let supported = attempt_handshake(target, Arc::new(config)).await.is_ok();
+        let (supported, negotiated_cipher, negotiated_group) =
+            match attempt_handshake(target, Arc::new(config)).await {
+                Ok(info) => (true, info.cipher, info.group),
+                Err(_) => (false, None, None),
+            };
 
         results.push(ProtocolResult {
             version: label.to_string(),
             supported,
-            negotiated_cipher: None,
+            negotiated_cipher,
+            negotiated_group,
         });
     }
 
     Ok(results)
 }
 
-pub async fn attempt_handshake(target: &Target, config: Arc<ClientConfig>) -> Result<()> {
+pub async fn attempt_handshake(target: &Target, config: Arc<ClientConfig>) -> Result<HandshakeInfo> {
     let connector = TlsConnector::from(config);
     let stream = TcpStream::connect(target.addr()).await?;
     let server_name = rustls::pki_types::ServerName::try_from(target.host.as_str())
         .map_err(|e| anyhow::anyhow!("Invalid server name: {e}"))?
         .to_owned();
-    connector.connect(server_name, stream).await?;
-    Ok(())
+    let tls_stream = connector.connect(server_name, stream).await?;
+    let conn = tls_stream.get_ref().1;
+    let cipher = conn.negotiated_cipher_suite().map(|s| format!("{:?}", s.suite()));
+    let group = conn.negotiated_key_exchange_group().map(|g| format!("{:?}", g.name()));
+    Ok(HandshakeInfo { cipher, group })
 }
