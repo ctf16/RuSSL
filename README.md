@@ -16,7 +16,7 @@ Output is either a formatted table (default) or machine-readable JSON (`--json`)
 Clone and build with Cargo:
 
 ```sh
-git clone <repo-url>
+git clone https://github.com/ctf16/RuSSL.git
 cd russl
 cargo build --release
 ```
