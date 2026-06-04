@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository.
 
 ## What this is
 
-**RuSSL** (`russl` binary, `tls-inspector` package) is a Rust async CLI tool that connects
+**RuSSL** (`russl` binary + package) is a Rust async CLI tool that connects
 to a remote host, performs TLS handshakes, parses the certificate chain, optionally
 probes cipher suite acceptance, and optionally runs inference-based vulnerability
 checks. Output is either a pretty-printed table (default) or machine-readable JSON
