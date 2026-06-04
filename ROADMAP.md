@@ -27,11 +27,11 @@ Infrastructure hardening alongside the first real feature category.
 
 Checks that describe how the TLS connection itself is configured, beyond raw protocol version.
 
-- [ ] **HSTS detection** — HTTP GET on port 80, inspect the `Strict-Transport-Security` response header; report max-age and whether `includeSubDomains` / `preload` are set
-- [ ] **Forward secrecy** — determine whether the negotiated cipher suite uses an ephemeral key exchange (ECDHE / DHE); flag servers that only offer non-FS suites
-- [ ] **OCSP stapling** — detect whether the server includes a stapled OCSP response in the TLS handshake
-- [ ] **Session resumption** — detect support for TLS session tickets and session ID resumption
-- [ ] **SNI behaviour** — probe the host with and without SNI, report whether the server presents a different certificate or rejects the connection
+- [x] **HSTS detection** — HTTP GET on port 80, inspect the `Strict-Transport-Security` response header; report max-age and whether `includeSubDomains` / `preload` are set
+- [x] **Forward secrecy** — determine whether the negotiated cipher suite uses an ephemeral key exchange (ECDHE / DHE); flag servers that only offer non-FS suites
+- [x] **OCSP stapling** — detect whether the server includes a stapled OCSP response in the TLS handshake
+- [x] **Session resumption** — detect support for TLS session tickets and session ID resumption
+- [x] **SNI behaviour** — probe the host with and without SNI, report whether the server presents a different certificate or rejects the connection
 
 ---
 
