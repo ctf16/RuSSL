@@ -31,6 +31,7 @@ src/
     handshake.rs        Per-version TLS handshake probes, attempt_handshake()
     ciphers.rs          Per-suite probes via custom CryptoProvider, semaphore-limited
     vulns.rs            Inference-based vulnerability checks against ProtocolResult slice
+    connection.rs       Phase 2 connection-property probes (FS, stapling, resumption, SNI, HSTS)
   output/
     mod.rs              Re-exports json and pretty submodules
     json.rs             serde_json pretty-print to stdout
@@ -121,6 +122,32 @@ counts the JSON array. Both are gated behind `--ocsp` / `--ct`, run inside
 rather than failing the scan. crt.sh is frequently slow or returns 502 — that is
 an external condition, handled gracefully.
 
+## Connection properties (`scanner::connection`, `--connection`)
+
+`connection::inspect` runs five Phase 2 checks concurrently (`tokio::join!`) and
+degrades each one independently rather than aborting the scan:
+
+- **Forward secrecy** is derived from the already-collected `ProtocolResult`
+  slice — no extra traffic. TLS 1.3 is always forward-secret; TLS 1.2 is keyed
+  off `ECDHE`/`DHE` in the negotiated suite name.
+- **OCSP stapling** reuses `cert::CertCapture`, which now records the
+  `ocsp_response` argument the verifier receives. rustls always sends the
+  `status_request` extension, so a stapled response simply shows up there.
+- **Session resumption** uses a `RecordingStore` wrapping
+  `ClientSessionMemoryCache`; it flips a flag when rustls calls
+  `set_tls12_session` / `insert_tls13_ticket`. TLS 1.2 material lands during the
+  handshake, but TLS 1.3 `NewSessionTicket` is post-handshake, so the probe
+  drives one short best-effort HTTP round-trip to pump it.
+- **SNI behaviour** runs a second handshake presenting the resolved IP as the
+  `ServerName` — rustls omits the SNI extension for IP names — and compares the
+  leaf DER against the SNI handshake. IP targets report `not-applicable`.
+- **HSTS** is read over **HTTPS** on the target port (not cleartext port 80):
+  the header is only meaningful over TLS, and `scanner::http` already does real
+  chain verification. A missing/untrusted HTTPS endpoint yields `hsts: None`.
+
+`CertCapture` is `pub(crate)` and shared with `cert::inspect`; its `certs()` /
+`ocsp_response()` accessors return cloned snapshots taken after the handshake.
+
 ## Git guidelines
 
 **Commit message prefixes.** Every commit message MUST start with one of these
@@ -143,11 +170,10 @@ several features or unrelated files. Do not lump a feature, a README edit, and a
 dependency bump into a single commit — that is three commits (`feat:`, `README:`,
 `dep:`).
 
-## Phase 2+ work (not yet implemented)
+## Phase 3+ work (not yet implemented)
 
 - **Legacy protocol detection** — shell out to `openssl s_client -tls1 / -tls1_1 / -ssl3`
 - **Heartbleed raw probe** — manual TLS ClientHello over `TcpStream`, malformed
   HeartbeatRequest (type `0x18`), check for data in response
-- **HSTS check** — HTTP GET on port 80, inspect `Strict-Transport-Security` header
 - **Bulk scanning** — `--input-file` flag, `FuturesUnordered` pool with configurable
   concurrency
