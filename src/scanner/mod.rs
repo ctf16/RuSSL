@@ -1,5 +1,6 @@
 pub mod cert;
 pub mod ciphers;
+pub mod connection;
 pub mod ct;
 pub(crate) mod der;
 pub mod handshake;
@@ -29,6 +30,7 @@ pub struct ScanOpts {
     pub check_vulns: bool,
     pub check_ocsp: bool,
     pub check_ct: bool,
+    pub check_connection: bool,
     pub timeout_secs: u64,
 }
 
@@ -56,6 +58,7 @@ pub struct ScanResult {
     pub protocols: Vec<handshake::ProtocolResult>,
     pub cipher_suites: Vec<ciphers::CipherResult>,
     pub vulnerabilities: Vec<vulns::VulnResult>,
+    pub connection: Option<connection::ConnectionProperties>,
 }
 
 pub async fn run_scan(target: &Target, opts: &ScanOpts) -> Result<ScanResult, ScanError> {
@@ -76,6 +79,18 @@ pub async fn run_scan(target: &Target, opts: &ScanOpts) -> Result<ScanResult, Sc
         vec![]
     };
 
+    let connection = if opts.check_connection {
+        match connection::inspect(target, opts, &protocols).await {
+            Ok(props) => Some(props),
+            Err(e) => {
+                eprintln!("Connection property checks failed: {e}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     Ok(ScanResult {
         host: target.host.clone(),
         port: target.port,
@@ -83,6 +98,7 @@ pub async fn run_scan(target: &Target, opts: &ScanOpts) -> Result<ScanResult, Sc
         protocols,
         cipher_suites,
         vulnerabilities,
+        connection,
     })
 }
 

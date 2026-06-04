@@ -36,7 +36,12 @@ struct Cli {
     #[arg(long)]
     ct: bool,
 
-    /// Run all available analyses (implies --enumerate-ciphers --check-vulns --ocsp --ct)
+    /// Inspect connection properties (forward secrecy, OCSP stapling,
+    /// session resumption, SNI behaviour, HSTS)
+    #[arg(long)]
+    connection: bool,
+
+    /// Run all available analyses (implies --enumerate-ciphers --check-vulns --ocsp --ct --connection)
     #[arg(long)]
     all: bool,
 
@@ -61,6 +66,7 @@ async fn main() -> ExitCode {
         check_vulns: cli.check_vulns || cli.all,
         check_ocsp: cli.ocsp || cli.all,
         check_ct: cli.ct || cli.all,
+        check_connection: cli.connection || cli.all,
         timeout_secs: cli.timeout,
     };
 

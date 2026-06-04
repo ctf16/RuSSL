@@ -38,13 +38,26 @@ pub struct CertInfo {
 
 /// Custom verifier that captures raw DER certs without verifying them.
 #[derive(Debug)]
-struct CertCapture {
+pub(crate) struct CertCapture {
     certs: Mutex<Vec<Vec<u8>>>,
+    /// The OCSP response stapled into the handshake, empty when none was sent.
+    ocsp: Mutex<Vec<u8>>,
 }
 
 impl CertCapture {
-    fn new() -> Arc<Self> {
-        Arc::new(Self { certs: Mutex::new(vec![]) })
+    pub(crate) fn new() -> Arc<Self> {
+        Arc::new(Self { certs: Mutex::new(vec![]), ocsp: Mutex::new(vec![]) })
+    }
+
+    /// Cloned snapshot of the captured DER chain (leaf first).
+    pub(crate) fn certs(&self) -> Vec<Vec<u8>> {
+        self.certs.lock().unwrap().clone()
+    }
+
+    /// Cloned snapshot of the stapled OCSP response (empty when the server
+    /// did not staple one).
+    pub(crate) fn ocsp_response(&self) -> Vec<u8> {
+        self.ocsp.lock().unwrap().clone()
     }
 }
 
@@ -54,13 +67,16 @@ impl ServerCertVerifier for CertCapture {
         end_entity: &CertificateDer<'_>,
         intermediates: &[CertificateDer<'_>],
         _server_name: &ServerName<'_>,
-        _ocsp_response: &[u8],
+        ocsp_response: &[u8],
         _now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
         let mut certs = self.certs.lock().unwrap();
         certs.push(end_entity.to_vec());
         for i in intermediates {
             certs.push(i.to_vec());
+        }
+        if !ocsp_response.is_empty() {
+            *self.ocsp.lock().unwrap() = ocsp_response.to_vec();
         }
         Ok(ServerCertVerified::assertion())
     }
@@ -113,7 +129,7 @@ pub async fn inspect(target: &Target, opts: &ScanOpts) -> Result<CertInfo, ScanE
             .map_err(|e| ScanError::InvalidName(e.to_string()))?
             .to_owned();
         connector.connect(server_name, stream).await?;
-        Ok(capture.certs.lock().unwrap().clone())
+        Ok(capture.certs())
     })
     .await?;
 

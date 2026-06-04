@@ -20,7 +20,18 @@ pub enum Scheme {
 
 pub struct HttpResponse {
     pub status: u16,
+    pub headers: Vec<(String, String)>,
     pub body: Vec<u8>,
+}
+
+impl HttpResponse {
+    /// Case-insensitive lookup of the first header matching `name`.
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers
+            .iter()
+            .find(|(k, _)| k.eq_ignore_ascii_case(name))
+            .map(|(_, v)| v.as_str())
+    }
 }
 
 /// Perform a single HTTP request and read the full response.
@@ -118,14 +129,17 @@ fn parse_response(raw: &[u8]) -> Result<HttpResponse, ScanError> {
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| ScanError::Http(format!("bad status line: {status_line}")))?;
 
+    let mut headers: Vec<(String, String)> = Vec::new();
     let mut chunked = false;
     for line in lines {
         if let Some((k, v)) = line.split_once(':') {
-            if k.trim().eq_ignore_ascii_case("transfer-encoding")
+            let (k, v) = (k.trim(), v.trim());
+            if k.eq_ignore_ascii_case("transfer-encoding")
                 && v.split(',').any(|t| t.trim().eq_ignore_ascii_case("chunked"))
             {
                 chunked = true;
             }
+            headers.push((k.to_string(), v.to_string()));
         }
     }
 
@@ -135,7 +149,7 @@ fn parse_response(raw: &[u8]) -> Result<HttpResponse, ScanError> {
         body.to_vec()
     };
 
-    Ok(HttpResponse { status, body })
+    Ok(HttpResponse { status, headers, body })
 }
 
 /// Decode HTTP/1.1 chunked transfer-encoding. Trailers are ignored.

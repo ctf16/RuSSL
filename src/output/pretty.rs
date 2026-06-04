@@ -68,6 +68,93 @@ pub fn print(result: &ScanResult) {
         println!("{t}\n");
     }
 
+    // Connection properties
+    if let Some(conn) = &result.connection {
+        println!("🔗 Connection Properties");
+        let mut t = Table::new();
+        t.load_preset(UTF8_FULL);
+        t.set_header(vec!["Property", "Value"]);
+
+        let fs = &conn.forward_secrecy;
+        t.add_row(vec![
+            "Forward Secrecy".to_string(),
+            if fs.all_forward_secret {
+                "✅ All negotiated suites".to_string()
+            } else {
+                "⚠️  Non-ephemeral suite negotiated".to_string()
+            },
+        ]);
+        for p in &fs.protocols {
+            t.add_row(vec![
+                format!("  {}", p.version),
+                format!(
+                    "{} — {}",
+                    if p.forward_secret { "FS" } else { "no FS" },
+                    p.cipher.as_deref().unwrap_or("—"),
+                ),
+            ]);
+        }
+
+        let staple = &conn.ocsp_stapling;
+        t.add_row(vec![
+            "OCSP Stapling".to_string(),
+            if staple.stapled {
+                format!("✅ Yes ({} bytes)", staple.response_len)
+            } else {
+                "❌ No".to_string()
+            },
+        ]);
+
+        let sr = &conn.session_resumption;
+        t.add_row(vec![
+            "Session Resumption".to_string(),
+            if sr.supported {
+                let mut parts = Vec::new();
+                if sr.tls13_ticket {
+                    parts.push("TLS 1.3 ticket");
+                }
+                if sr.tls12_session {
+                    parts.push("TLS 1.2 session");
+                }
+                format!("✅ {}", parts.join(", "))
+            } else {
+                "❌ Not offered".to_string()
+            },
+        ]);
+
+        t.add_row(vec!["SNI Behaviour".to_string(), conn.sni.outcome.to_string()]);
+        if let (Some(a), Some(b)) = (&conn.sni.with_sni_subject, &conn.sni.without_sni_subject) {
+            if a != b {
+                t.add_row(vec!["  with SNI".to_string(), a.clone()]);
+                t.add_row(vec!["  without SNI".to_string(), b.clone()]);
+            }
+        }
+
+        match &conn.hsts {
+            Some(h) if h.present => {
+                let mut v = format!(
+                    "✅ max-age={}",
+                    h.max_age.map(|m| m.to_string()).unwrap_or_else(|| "?".to_string())
+                );
+                if h.include_subdomains {
+                    v.push_str("; includeSubDomains");
+                }
+                if h.preload {
+                    v.push_str("; preload");
+                }
+                t.add_row(vec!["HSTS".to_string(), v]);
+            }
+            Some(_) => {
+                t.add_row(vec!["HSTS".to_string(), "❌ Not present".to_string()]);
+            }
+            None => {
+                t.add_row(vec!["HSTS".to_string(), "— (probe failed)".to_string()]);
+            }
+        }
+
+        println!("{t}\n");
+    }
+
     // Vulnerabilities
     if !result.vulnerabilities.is_empty() {
         println!("⚠️  Vulnerability Checks");
