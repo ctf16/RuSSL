@@ -43,7 +43,8 @@ Options:
       --check-vulns       Run vulnerability checks
       --ocsp              Check certificate revocation status via OCSP
       --ct                Query crt.sh for Certificate Transparency log entries
-      --all               Run all available analyses (ciphers, vulns, OCSP, CT)
+      --connection        Inspect connection properties (FS, OCSP stapling, resumption, SNI, HSTS)
+      --all               Run all available analyses (ciphers, vulns, OCSP, CT, connection)
       --json              Output results as JSON
       --timeout <SECS>    Connection timeout in seconds [default: 10]
   -h, --help              Print help
@@ -128,6 +129,18 @@ Inference-based checks against the collected protocol data:
 > **Note:** Heartbleed detection requires a raw TCP probe that is not yet
 > implemented. Use [testssl.sh](https://testssl.sh) to verify Heartbleed
 > status in the meantime.
+
+### Connection properties (`--connection`)
+
+Describes how the negotiated TLS connection is configured:
+
+| Property | Method |
+|---|---|
+| Forward secrecy | Whether each negotiated suite uses ephemeral key exchange (TLS 1.3 always; TLS 1.2 via ECDHE/DHE) |
+| OCSP stapling | Whether the server stapled an OCSP response into the handshake |
+| Session resumption | Whether the server issues TLS 1.3 tickets or a resumable TLS 1.2 session |
+| SNI behaviour | Compares the certificate served with SNI against the one served without it (presents an IP `ServerName`); reports same / different / rejected |
+| HSTS | HTTPS GET on the target port; reports `max-age`, `includeSubDomains`, `preload` from the `Strict-Transport-Security` header |
 
 ### Output formats
 
