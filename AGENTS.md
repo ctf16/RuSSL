@@ -159,6 +159,7 @@ prefixes, chosen by what the commit touches:
 - `README:` — README updates
 - `ROADMAP:` — ROADMAP updates
 - `AGENTS:` — AGENTS.md updates
+- `learning:` — `learning/` theory notes (per-phase security writeups)
 
 **Categorize by feature.** Group only the diffs that belong to a single feature
 or logically connected change into one commit. A commit's files should all serve
