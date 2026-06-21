@@ -29,6 +29,22 @@ Alternatively, run directly without installing:
 cargo run -- <args>
 ```
 
+### Docker
+
+A minimal container image is provided via the repository `Dockerfile`. Build it
+and invoke `russl` as the image entrypoint:
+
+```sh
+docker build -t russl .
+docker run --rm russl example.com --connection
+docker run --rm russl example.com --json > report.json
+```
+
+The image is a statically linked `musl` binary on top of `alpine`, runs as a
+non-root user, and bundles `ca-certificates` so the HTTPS-based checks
+(`--ocsp`, `--ct`, `--connection`) can verify certificate chains against the
+system trust store.
+
 ## Usage
 
 ```
