@@ -1,0 +1,12 @@
+# Build artifacts and VCS — never needed in the build context.
+target
+.git
+.gitignore
+
+# Docker files themselves.
+Dockerfile
+.dockerignore
+
+# Docs / notes the build does not consume.
+*.md
+learning
