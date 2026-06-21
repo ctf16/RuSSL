@@ -171,6 +171,17 @@ several features or unrelated files. Do not lump a feature, a README edit, and a
 dependency bump into a single commit — that is three commits (`feat:`, `README:`,
 `dep:`).
 
+## Keeping documentation in sync
+
+After any user-facing change — a new or renamed flag, a changed default, a new
+output field, a new install or run path (e.g. a container image), or any altered
+observable behaviour — revisit `README.md` in the same change set so the
+documented behaviour matches the code. The README is the user-facing contract;
+a feature that ships undocumented is incomplete. Purely internal refactors that
+change no observable behaviour need no README edit. README changes are committed
+under the `README:` prefix (see Git guidelines), separate from the `feat:`,
+`chore:`, or `dep:` commit that motivated them.
+
 ## Phase 3+ work (not yet implemented)
 
 - **Legacy protocol detection** — shell out to `openssl s_client -tls1 / -tls1_1 / -ssl3`
