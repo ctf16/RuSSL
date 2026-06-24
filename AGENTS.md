@@ -171,16 +171,57 @@ several features or unrelated files. Do not lump a feature, a README edit, and a
 dependency bump into a single commit — that is three commits (`feat:`, `README:`,
 `dep:`).
 
-## Keeping documentation in sync
+## Documenting your work
+
+Documentation is a deliverable, not an afterthought. Three artifacts capture
+the work in this repo; each has a different audience and a different cadence,
+and each lives on its own commit (see Git guidelines).
+
+### `AGENTS.md` (this file) — contributor-facing writeup
+
+After any non-trivial change — a new module, an architectural decision, a
+non-obvious choice forced by an upstream API quirk, or a gotcha future
+contributors would otherwise rediscover the hard way — add or update the
+relevant section here in the same change set.
+
+The existing sections are the style model. Each captures the *why* behind a
+choice the source code alone cannot explain: why `cert::CertCapture` skips
+signature checks on purpose; why ring is the only crypto provider and
+`aws-lc-rs` must not enter the dep tree; why `with_cipher_suites()` is gone in
+rustls 0.23 and what replaces it; why HSTS is fetched over HTTPS rather than
+plain HTTP; why the OCSP / CT / HSTS probes degrade silently instead of
+failing the scan; why progress output goes to stderr. Group by subsystem, not
+by chronological change. Don't narrate diffs — write the rule a future change
+still needs to obey, in terse paragraphs that read like *"the next contributor
+would have lost half a day without this."*
+
+If the change adds a new `src/scanner/` module or reshuffles existing ones,
+update the **Module map** as part of the same edit. Pure refactors that
+introduce no new constraint, decision, or gotcha need no AGENTS edit. Commit
+under the `AGENTS:` prefix, separate from the `feat:` / `chore:` / `dep:`
+commit that motivated it.
+
+### `README.md` — user-facing contract
 
 After any user-facing change — a new or renamed flag, a changed default, a new
-output field, a new install or run path (e.g. a container image), or any altered
-observable behaviour — revisit `README.md` in the same change set so the
-documented behaviour matches the code. The README is the user-facing contract;
-a feature that ships undocumented is incomplete. Purely internal refactors that
-change no observable behaviour need no README edit. README changes are committed
-under the `README:` prefix (see Git guidelines), separate from the `feat:`,
-`chore:`, or `dep:` commit that motivated them.
+output field, a new install or run path (e.g. a container image), or any
+altered observable behaviour — revisit `README.md` in the same change set so
+the documented behaviour matches the code. The README is the user-facing
+contract; a feature that ships undocumented is incomplete. Purely internal
+refactors that change no observable behaviour need no README edit. Commit
+under the `README:` prefix, separate from the `feat:` / `chore:` / `dep:`
+commit that motivated it.
+
+### `learning/phaseN.md` — security theory notes
+
+Each implementation **phase** from `ROADMAP.md` gets one accompanying note in
+`learning/` explaining the security motivation behind the checks the phase
+adds: what attack each check defends against, what the relevant RFCs say, and
+the trade-offs the protocol design forced. These are written once a phase is
+substantively complete (not per-commit), cross-reference the implementing
+modules under `src/scanner/` by name, and follow the structure, depth, and
+tone of `learning/phase1.md` and `learning/phase2.md` — theory grounded in the
+code, not generic background. Commit under the `learning:` prefix.
 
 ## Phase 3+ work (not yet implemented)
 
